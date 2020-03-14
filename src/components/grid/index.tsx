@@ -1,4 +1,6 @@
 import React from 'react'
+import styles from './styles.module.css'
+
 import Slide from '../slide'
 
 interface Props {
@@ -40,13 +42,11 @@ export default React.memo((props: Props) => {
   ]
 
   return (
-    <div>
+    <div className={styles.root}>
       {array.map(value => (
-        <Slide
-          key={`slide-${value}`}
-          number={value}
-          onClick={() => props.onPick(value)}
-        />
+        <div className={styles.item} key={`slide-${value}`}>
+          <Slide number={value} onClick={() => props.onPick(value)} />
+        </div>
       ))}
     </div>
   )
