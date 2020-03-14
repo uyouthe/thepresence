@@ -1,7 +1,10 @@
 import React from 'react'
-import Slide from './components/slide'
+import styles from './styles.module.css'
 import { SortableContainer, SortableElement } from 'react-sortable-hoc'
 import arrayMove from 'array-move'
+
+import Slide from './components/slide'
+import Grid from './components/grid'
 
 interface Indexes {
   oldIndex: number
@@ -24,20 +27,31 @@ const SortableList = SortableContainer((props: SortableListProps) => {
   return (
     <div>
       {props.items.map((value: number, index: number) => (
-        <SortableItem key={`item-${value}`} index={index} value={value} />
+        <SortableItem
+          key={`item-${value}-${index}`}
+          index={index}
+          value={value}
+        />
       ))}
     </div>
   )
 })
 
 const App = React.memo(() => {
-  const [state, setState] = React.useState([1, 2, 3, 4, 5, 6])
+  const [state, setState] = React.useState<number[]>([])
 
   const onSortEnd = ({ oldIndex, newIndex }: Indexes) => {
     setState(state => arrayMove(state, oldIndex, newIndex))
   }
 
-  return <SortableList items={state} onSortEnd={onSortEnd} />
+  const onPick = (value: number) => setState(state => state.concat([value]))
+
+  return (
+    <div className={styles.root}>
+      <SortableList items={state} onSortEnd={onSortEnd} />
+      <Grid onPick={onPick} />
+    </div>
+  )
 })
 
 export default App
