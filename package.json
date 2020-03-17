@@ -22,7 +22,7 @@
   },
   "scripts": {
     "start": "react-scripts build && node backend/index.js",
-    "dev": "react-scripts start",
+    "dev": "concurrently \"react-scripts start\" \"nodemon backend/index.js\"",
     "build": "react-scripts build"
   },
   "eslintConfig": {
@@ -39,5 +39,9 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "concurrently": "^5.1.0",
+    "nodemon": "^2.0.2"
   }
 }
