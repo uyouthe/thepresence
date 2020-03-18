@@ -10,7 +10,10 @@ mongoose.connect(process.env.MONGODB_URI, {
   useUnifiedTopology: true,
 })
 
-const User = mongoose.model('User', { email: String, password: String })
+const User = mongoose.model('User', {
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+})
 
 app.use(express.static(path.join(__dirname, '/../build')))
 app.use(bodyParser.urlencoded({ extended: true }))
@@ -21,14 +24,37 @@ app.get('/api/getList', (req, res) => {
 })
 
 app.post('/api/signup', (req, res) => {
-  const newUser = new User({
-    email: req.body.email,
-    password: req.body.password,
-  })
-    .save()
-    .then(() => {
-      res.json({ ok: 'true' })
+  const { email, password } = req.body
+
+  if (!email || !password) {
+    res.json({
+      ok: false,
+      errors: 'You have to provide email and password',
     })
+  }
+
+  User.findOne({ email }, (err, user) => {
+    if (err) {
+      res.json({
+        ok: false,
+        ...err,
+      })
+    } else if (user) {
+      res.json({
+        ok: false,
+        errors: 'User with that email already exists',
+      })
+    } else {
+      const newUser = new User({ email, password })
+        .save()
+        .then(() => {
+          res.json({ ok: 'true' })
+        })
+        .catch(error => {
+          res.json({ ok: false, ...error })
+        })
+    }
+  })
 })
 
 app.get('*', (req, res) => {
