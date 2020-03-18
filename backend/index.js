@@ -3,6 +3,10 @@ const express = require('express')
 const path = require('path')
 const mongoose = require('mongoose')
 const bodyParser = require('body-parser')
+const passport = require('passport')
+const session = require('express-session')
+const LocalStrategy = require('passport-local').Strategy
+const passportLocalMongoose = require('passport-local-mongoose')
 const app = express()
 
 mongoose.connect(process.env.MONGODB_URI, {
@@ -10,68 +14,116 @@ mongoose.connect(process.env.MONGODB_URI, {
   useUnifiedTopology: true,
 })
 
-const User = mongoose.model('User', {
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-})
+app.use(
+  session({
+    name: 'session-id',
+    secret: '123-456-789',
+    saveUninitialized: false,
+    resave: false,
+  }),
+)
 
+app.use(passport.initialize())
+app.use(passport.session())
+
+const UserSchema = new mongoose.Schema({
+  username: {
+    type: String,
+    unique: true,
+    required: true,
+  },
+})
+UserSchema.plugin(passportLocalMongoose)
+const User = mongoose.model('User', UserSchema)
+
+passport.use(new LocalStrategy(User.authenticate()))
+passport.serializeUser(User.serializeUser())
+passport.deserializeUser(User.deserializeUser())
 app.use(express.static(path.join(__dirname, '/../build')))
 app.use(bodyParser.urlencoded({ extended: true }))
 
-app.get('/api/getList', (req, res) => {
+const ensureAuthenticated = (req, res, next) => {
+  if (req.isAuthenticated()) {
+    return next()
+  } else {
+    res.json({
+      err: 'Not authenticated',
+    })
+  }
+}
+
+app.get('/api/getList', ensureAuthenticated, (req, res) => {
   var list = ['item1', 'item2', 'item3', 'item4']
   res.json(list)
 })
 
-app.post('/api/signup', (req, res) => {
-  const { email, password } = req.body
-
-  if (!email || !password) {
-    res.json({
-      ok: false,
-      errors: 'You have to provide email and password',
-    })
-  }
-
-  User.findOne({ email }, (err, user) => {
-    if (err) {
-      res.json({ ok: false, ...err })
-    } else if (user) {
-      res.json({
-        ok: false,
-        errors: 'User with that email already exists',
-      })
-    } else {
-      const newUser = new User({ email, password })
-        .save()
-        .then(() => {
-          res.json({ ok: 'true' })
+app.post('/api/signup', (req, res, next) => {
+  User.register(
+    new User({
+      username: req.body.username,
+    }),
+    req.body.password,
+    (err, user) => {
+      if (err) {
+        res.statusCode = 500
+        res.setHeader('Content-Type', 'application/json')
+        res.json({
+          err: err,
         })
-        .catch(error => {
-          res.json({ ok: false, ...error })
+      } else {
+        passport.authenticate('local')(req, res, () => {
+          User.findOne(
+            {
+              username: req.body.username,
+            },
+            (err, person) => {
+              res.statusCode = 200
+              res.setHeader('Content-Type', 'application/json')
+              res.json({
+                success: true,
+                status: 'Registration Successful!',
+              })
+            },
+          )
         })
-    }
-  })
+      }
+    },
+  )
 })
 
-app.post('/api/signin', (req, res) => {
-  const { email, password } = req.body
+app.post('/api/signin', passport.authenticate('local'), (req, res) => {
+  User.findOne(
+    {
+      username: req.body.username,
+    },
+    (err, person) => {
+      res.statusCode = 200
+      res.setHeader('Content-Type', 'application/json')
+      res.json({
+        success: true,
+        status: 'You are successfully logged in!',
+      })
+    },
+  )
+})
 
-  if (!email || !password) {
-    res.json({
-      ok: false,
-      errors: 'You have to provide email and password',
-    })
-  } else {
-    User.findOne({ email, password }, (err, user) => {
+app.get('/api/logout', (req, res, next) => {
+  if (req.session) {
+    req.logout()
+    req.session.destroy(err => {
       if (err) {
-        res.json({ ok: false, ...err })
-      } else if (user) {
-        res.json({ ok: true })
+        console.log(err)
       } else {
-        res.json({ ok: false, err: 'No such user' })
+        res.clearCookie('session-id')
+        res.json({
+          message: 'You are successfully logged out!',
+        })
       }
     })
+  } else {
+    var err = new Error('You are not logged in!')
+    err.status = 403
+    next(err)
   }
 })
 
