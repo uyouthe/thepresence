@@ -35,10 +35,7 @@ app.post('/api/signup', (req, res) => {
 
   User.findOne({ email }, (err, user) => {
     if (err) {
-      res.json({
-        ok: false,
-        ...err,
-      })
+      res.json({ ok: false, ...err })
     } else if (user) {
       res.json({
         ok: false,
@@ -55,6 +52,27 @@ app.post('/api/signup', (req, res) => {
         })
     }
   })
+})
+
+app.post('/api/signin', (req, res) => {
+  const { email, password } = req.body
+
+  if (!email || !password) {
+    res.json({
+      ok: false,
+      errors: 'You have to provide email and password',
+    })
+  } else {
+    User.findOne({ email, password }, (err, user) => {
+      if (err) {
+        res.json({ ok: false, ...err })
+      } else if (user) {
+        res.json({ ok: true })
+      } else {
+        res.json({ ok: false, err: 'No such user' })
+      }
+    })
+  }
 })
 
 app.get('*', (req, res) => {
