@@ -1,5 +1,6 @@
 require('dotenv').config()
 const express = require('express')
+const helmet = require('helmet')
 const path = require('path')
 const mongoose = require('mongoose')
 const bodyParser = require('body-parser')
@@ -14,6 +15,8 @@ mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
+
+app.use(helmet())
 
 app.use(
   session({
