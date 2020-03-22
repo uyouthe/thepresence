@@ -5,6 +5,7 @@ const mongoose = require('mongoose')
 const bodyParser = require('body-parser')
 const passport = require('passport')
 const session = require('express-session')
+const MongoStore = require('connect-mongo')(session)
 const LocalStrategy = require('passport-local').Strategy
 const passportLocalMongoose = require('passport-local-mongoose')
 const app = express()
@@ -20,6 +21,7 @@ app.use(
     secret: '123-456-789',
     saveUninitialized: false,
     resave: false,
+    store: new MongoStore({ mongooseConnection: mongoose.connection }),
   }),
 )
 
